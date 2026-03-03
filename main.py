@@ -101,37 +101,25 @@ def analyze_users(user_id: int):
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
 @app.get("/users/{user_id}/analyses")
-def get_analyses(
+def get_user_analyses(
     user_id: int,
-    limit: int = Query(5),
-    offset: int = Query(0),
+    limit: int = Query(5, gt=0),
+    offset: int = Query(0, ge=0),
     sort: str = Query("asc"),
-    min_words: int = Query(None)
+    min_words: int = Query(None, ge=0)  
 ):
-    if limit <= 0:
-        raise HTTPException(status_code=400, detail="limit must be positive")
-
-    if offset < 0:
-        raise HTTPException(status_code=400, detail="offset must be zero or positive")
-
-    if sort not in ["asc", "desc"]:
-        raise HTTPException(status_code=400, detail="sort must be 'asc' or 'desc'")
-
-    if min_words is not None and min_words < 0:
-        raise HTTPException(status_code=400, detail="min_words must be positive")
-
     user = next((u for u in users if u["id"] == user_id), None)
-
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    analyses = list(user.get("analyses", {}).values())
+    analyses_list = list(user.get("analyses", {}).values())
 
     if min_words is not None:
-        analyses = [a for a in analyses if a["word_count"] >= min_words]
+        analyses_list = [a for a in analyses_list if a["word_count"] >= min_words]
 
     reverse = True if sort == "desc" else False
-    analyses = sorted(analyses, key=lambda x: x["analysis_id"], reverse=reverse)    
-    result = analyses[offset: offset + limit]
+    analyses_list = sorted(analyses_list, key=lambda x: x["analysis_id"], reverse=reverse)
+
+    result = analyses_list[offset: offset + limit]
 
     return result
